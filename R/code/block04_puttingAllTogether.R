@@ -7,7 +7,6 @@ str(gDat)
 ## anticipated input: Gapminder data for one country
 ## see block03 script for development of this
 jFun <- function(z) {
-  yearMin <- min(z$year)
   jCoef <- coef(lm(lifeExp ~ I(year - yearMin), z))
   names(jCoef) <- c("intercept", "slope")
   return(jCoef)
@@ -15,6 +14,7 @@ jFun <- function(z) {
 
 ## get intercept and slope for each country
 library(plyr)
+yearMin <- min(gDat$year)
 gCoef <- ddply(gDat, .(country, continent), jFun)
 str(gCoef)
 tail(gCoef)
@@ -24,10 +24,10 @@ library(lattice)
 bwplot(slope ~ continent, gCoef)
 ## alphabetical order is rarely justified
 
-gCoef$continent <-
-  reorder(gCoef$continent, gCoef$slope)
+gCoef$continent <- reorder(gCoef$continent, gCoef$slope)
 str(gCoef)
 bwplot(slope ~ continent, gCoef)
+levels(gCoef$continent)
 ## much more logical
 ## tables and plots sorted this way will give more insight!
 
@@ -45,8 +45,8 @@ levels(gCoef$continent)
 
 ## plain text is always good!
 ## we slowly built up the arguments below
-write.table(gCoef, "gCoef.txt", quote = FALSE,
-            row.names = FALSE, sep = "\t")
+## you may not want all of these?
+write.table(gCoef, "gCoef.txt", quote = FALSE, row.names = FALSE, sep = "\t")
 
 ## bad news about plain text storage:
 ## upon re-import via read.table, factors levels revert to alphabetical order
@@ -56,8 +56,7 @@ gCoef <- read.delim("gCoef.txt")
 levels(gCoef$continent) # back to alphabetical!!
 
 ## let's re-reorder the continent factor levels
-gCoef$continent <-
-  reorder(gCoef$continent, gCoef$slope)
+gCoef$continent <- reorder(gCoef$continent, gCoef$slope)
 bwplot(slope ~ continent, gCoef)
 levels(gCoef$continent)
 
@@ -68,7 +67,8 @@ gCoef <- dget("gCoef_DPUT.txt")
 rm(gCoef)
 levels(gCoef$continent)
 ## success!
-## but the file written by DPUT is not, e.g., easy to browse or open in Excel
+## but the file written by DPUT is not, e.g., easy to browse or open
+## in Excel or anywhere outside of R, for that matter
 
 ## if we abandon plain text, there is an R-specific binary format
 saveRDS(gCoef, "gCoef.rds")

@@ -6,6 +6,7 @@
 ## using Run, Source, etc via mouse and keyboard shortcuts
 n <- 100
 a <- 2
+
 b <- 3
 sigSq <- 0.5
 x <- runif(n)

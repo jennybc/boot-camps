@@ -3,9 +3,13 @@
 gDat <- read.delim("gapminderDataFiveYear.txt")
 str(gDat)
 
-## don't store copies of little bits of your data.frame like this unless you
+## don't create copies of little bits of your data.frame like this unless you
 ## have good reason
 (snippet <- subset(gDat, country == "Cambodia"))
+## good reasons to do this:
+## [1] you have long-term need for the excerpt
+## [2] you're prototyping a function to fold into a data aggregation
+## operation and you want to run before you walk
 
 ## do you want to make plots for each value of a factor? then use multi-panel
 ## conditioning in lattice or facetting in ggplot2
@@ -13,19 +17,24 @@ library(lattice)
 xyplot(lifeExp ~ year | country, gDat,
        subset = continent == "Oceania")
 
+## do you want to compute on various bits of your object? then ....
+
 ## let's begin with the data aggregation functions built-in to R
 
 ## let's begin with a function that operates on a matrix (or higher dimensional
 ## arrays, actually)
-(jCountries <- sort(c("Canada", "Cambodia", "Rwanda")))
+(jCountries <- c("Canada", "Cambodia", "Rwanda"))
 tinyDat <- subset(gDat, country %in% jCountries)
-## JB inserted this later ... safety first! making sure jCountries is in same
+str(tinyDat) # needs row and column names
+## safety first! making sure jCountries is in same
 ## order as the countries appear in tinyDat (and, therefore, gDat)
 ## important when we apply column names below
 (jCountries <- as.character(sort(unique(tinyDat$country))))
 tinyDat <- matrix(tinyDat$lifeExp, ncol = length(jCountries))
 colnames(tinyDat) <- jCountries
 rownames(tinyDat) <- sort(unique(gDat$year))
+tinyDat
+
 apply(tinyDat, 1, mean)
 apply(tinyDat, 2, median)
 ## the sensible names appearing here are the payoff for setting up colnames and
@@ -33,6 +42,7 @@ apply(tinyDat, 2, median)
 rowMeans(tinyDat) # FAST use for big datasets
 which.min(tinyDat[1, ])
 jCountries[apply(tinyDat, 1, which.min)]
+apply(tinyDat, 2, summary)
 
 ## moving on to sapply and lapply, which operate on lists
 ## recall that data.frames are a special case of a list
@@ -47,7 +57,7 @@ lapply(gDatNum, median)
 str(sapply(gDatNum, median))
 str(lapply(gDatNum, median))
 ## lapply always returns a list
-## sapply attempt to tidy up
+## sapply attempts to tidy up
 
 ## what if we want a summary that's 2-dimensional?
 sapply(gDatNum, range)
@@ -63,8 +73,18 @@ with(gDat,
        length(unique(x))
      }))
 
-## the un-predictability of what apply, sapply, lapply, tapply can return is
-## disappointing
+tapply(gDat$lifeExp, gDat$continent, range)
+leByCont <- tapply(gDat$lifeExp, gDat$continent, range)
+do.call(rbind, leByCont)
+rbind(leByCont[[1]], leByCont[[2]], leByCont[[3]],
+      leByCont[[4]], leByCont[[5]])
+leByCont <- rbind(leByCont[[1]], leByCont[[2]],
+                  leByCont[[3]],
+      leByCont[[4]], leByCont[[5]])
+## add the do.call and factor thing here
+
+## the un-predictability and unfinished quality of what apply, sapply,
+## lapply, tapply return is disappointing
 
 ## for data aggregation BLISS, use the add-on package plyr
 
@@ -72,17 +92,20 @@ with(gDat,
 ## read this paper to get the big picture:
 ## http://www.jstatsoft.org/v40/i01/paper
 
-install.packages(pkgs = "plyr")
+## un-comment this if you haven't installed plyr yet
+## install.packages(pkgs = "plyr")
 library(plyr)
 
 ddply(gDat, .(continent), summarise, median = median(lifeExp))
 
+## see how different the output of ddply and tapply are!
 str(ddply(gDat, .(continent), summarise, median = median(lifeExp)))
 str(tapply(gDat$lifeExp, gDat$continent, median))
 
-
-ddply(gDat, .(continent), summarise,
-      min = min(lifeExp), max = max(lifeExp))
+str(leByCont)
+str(leByCont2 <- ddply(gDat, .(continent),
+      summarise, min = min(lifeExp), max = max(lifeExp)))
+leByCont2
 
 ## let's run linear regression of lifeExp on year for individual countries and
 ## save the estimated intercept and slope
@@ -90,6 +113,7 @@ ddply(gDat, .(continent), summarise,
 ## walk before you run ....
 lm(lifeExp ~ year, gDat, subset = country == "Zimbabwe")
 xyplot(lifeExp ~ year, gDat, subset = country == "Zimbabwe")
+
 yearMin <- min(gDat$year)
 lm(lifeExp ~ I(year - yearMin), gDat,
    subset = country == "Zimbabwe")
@@ -98,7 +122,6 @@ coef(lm(lifeExp ~ I(year - yearMin), gDat,
 
 ## package your working protoype code in a function
 jFun <- function(z) {
-  yearMin <- min(z$year)
   jCoef <- coef(lm(lifeExp ~ I(year - yearMin), z))
   names(jCoef) <- c("intercept", "slope")
   return(jCoef)
